@@ -403,6 +403,16 @@ export class AIProviderFactory {
 export const aiService = {
     currentProvider: null as AIProvider | null,
 
+    // Initialize Gemini provider automatically using environment variable
+    init() {
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (apiKey && apiKey.trim() !== '') {
+            this.currentProvider = new GeminiAIProvider();
+        } else {
+            console.warn('VITE_GEMINI_API_KEY not found in environment variables');
+        }
+    },
+
     setProvider(providerName: string, apiKey: string) {
         if (!apiKey || apiKey.trim() === '') {
             throw new Error(`API key is required for ${providerName} provider`);
@@ -411,8 +421,13 @@ export const aiService = {
     },
 
     async analyzeExtensionRequest(extensionId: string, extensionName: string): Promise<AIRecommendation> {
+        // Auto-initialize if not already done
         if (!this.currentProvider) {
-            throw new Error('AI Provider not configured. Please set an API key first.');
+            this.init();
+        }
+
+        if (!this.currentProvider) {
+            throw new Error('AI Provider not configured. Please check your environment variables.');
         }
 
         const currentExtension = await this.currentProvider.analyzeExtension(extensionId, extensionName);
@@ -426,3 +441,6 @@ export const aiService = {
         };
     }
 };
+
+// Auto-initialize the service
+aiService.init();

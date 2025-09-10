@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Send, Loader, AlertTriangle, CheckCircle, XCircle, Settings } from 'lucide-react';
+import { Send, Loader, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import type { ExtensionRequest, AIRecommendation } from '../types';
 import { getExtensionStatus, findExtensionById } from '../data/mockData';
 import { aiService } from '../services/aiService';
+import { useRequests } from '../context/RequestsContext';
 import RecommendationCard from './RecommendationCard';
-import AIConfigModal from './AIConfigModal';
 
 interface ExtensionRequestFormProps {
     prefilledData?: Partial<ExtensionRequest>;
 }
 
 const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledData }) => {
+    const { addRequest } = useRequests();
     const [formData, setFormData] = useState<ExtensionRequest>({
         userName: '',
         email: '',
@@ -26,8 +27,6 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
         message: string;
         aiRecommendation?: AIRecommendation;
     } | null>(null);
-    const [showAIConfig, setShowAIConfig] = useState(false);
-    const [isAIConfigured, setIsAIConfigured] = useState(false);
 
     const [errors, setErrors] = useState<Partial<ExtensionRequest>>({});
 
@@ -73,12 +72,6 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
 
         if (!validateForm()) return;
 
-        // Check if AI is configured for new extension analysis
-        if (!isAIConfigured && !aiService.currentProvider) {
-            setShowAIConfig(true);
-            return;
-        }
-
         setLoading(true);
         setResult(null);
 
@@ -88,29 +81,35 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
 
             if (status === 'blocked') {
                 const blockedExtension = findExtensionById(formData.extensionId);
-                setResult({
-                    status: 'blocked',
+                const resultData = {
+                    status: 'blocked' as const,
                     message: `Extension "${formData.extensionName}" is blocked due to security concerns. ${blockedExtension?.description || 'This extension has been flagged as potentially harmful.'}`
-                });
+                };
+                setResult(resultData);
+                addRequest(formData, resultData);
                 setLoading(false);
                 return;
             }
 
             if (status === 'rejected') {
                 const rejectedExtension = findExtensionById(formData.extensionId);
-                setResult({
-                    status: 'rejected',
+                const resultData = {
+                    status: 'rejected' as const,
                     message: `Extension "${formData.extensionName}" has been previously rejected. ${rejectedExtension?.description || 'This extension does not meet our policy requirements.'}`
-                });
+                };
+                setResult(resultData);
+                addRequest(formData, resultData);
                 setLoading(false);
                 return;
             }
 
             if (status === 'approved') {
-                setResult({
-                    status: 'approved',
+                const resultData = {
+                    status: 'approved' as const,
                     message: `Extension "${formData.extensionName}" is already approved and available for use.`
-                });
+                };
+                setResult(resultData);
+                addRequest(formData, resultData);
                 setLoading(false);
                 return;
             }
@@ -121,11 +120,13 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
                 formData.extensionName
             );
 
-            setResult({
-                status: 'ai-analysis',
+            const resultData = {
+                status: 'ai-analysis' as const,
                 message: 'AI analysis completed. Please review the recommendation below.',
                 aiRecommendation
-            });
+            };
+            setResult(resultData);
+            addRequest(formData, resultData);
 
         } catch (error) {
             console.error('Error processing request:', error);
@@ -171,40 +172,20 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
     };
 
     return (
-        <div className="bg-white rounded-lg shadow-xl p-8 animate-fade-in">
-            <div className="text-center mb-8 relative">
-                <button
-                    type="button"
-                    onClick={() => setShowAIConfig(true)}
-                    className="absolute right-0 top-0 flex items-center space-x-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors duration-200"
-                    title="Configure AI Settings"
-                >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline">
-                        {isAIConfigured ? 'AI Configured' : 'Configure AI'}
-                    </span>
-                </button>
-
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="card-professional rounded-xl shadow-2xl p-6 sm:p-8 animate-fade-in max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
                     Chrome Extension Request
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-slate-600 text-sm sm:text-base">
                     Request access to install a new Chrome extension with AI-powered security analysis
                 </p>
-
-                {!isAIConfigured && (
-                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <p className="text-sm text-yellow-800">
-                            <strong>Note:</strong> AI analysis requires configuration. Click "Configure AI" to set up your API key.
-                        </p>
-                    </div>
-                )}
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="animate-slide-up animate-delay-1">
-                        <label htmlFor="userName" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="userName" className="block text-sm font-semibold text-slate-700 mb-2">
                             Full Name *
                         </label>
                         <input
@@ -213,7 +194,7 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
                             name="userName"
                             value={formData.userName}
                             onChange={handleInputChange}
-                            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${errors.userName ? 'border-red-500' : 'border-gray-300'
+                            className={`w-full px-4 py-3 sm:py-4 border rounded-xl focus-professional transition-all duration-300 text-sm sm:text-base touch-target ${errors.userName ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white hover:border-slate-300'
                                 }`}
                             placeholder="Enter your full name"
                         />
@@ -317,7 +298,7 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full btn-professional bg-gradient-to-r from-slate-800 to-slate-700 text-white py-3 sm:py-4 px-6 rounded-xl font-semibold hover:from-slate-700 hover:to-slate-600 focus-professional transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base touch-target"
                     >
                         {loading ? (
                             <>
@@ -349,15 +330,6 @@ const ExtensionRequestForm: React.FC<ExtensionRequestFormProps> = ({ prefilledDa
                     )}
                 </div>
             )}
-
-            <AIConfigModal
-                isOpen={showAIConfig}
-                onClose={() => setShowAIConfig(false)}
-                onConfigured={() => {
-                    setIsAIConfigured(true);
-                    setShowAIConfig(false);
-                }}
-            />
         </div>
     );
 };

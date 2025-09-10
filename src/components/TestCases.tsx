@@ -158,8 +158,8 @@ export default function TestCases({ onTestCaseSelect }: TestCasesProps) {
             <div className="flex items-center gap-3 mb-6">
                 <Play className="w-6 h-6 text-blue-600" />
                 <h2 className="text-2xl font-bold text-gray-900">Quick Test Cases</h2>
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    Click to auto-fill form
+                <span className="text-sm text-blue-600 bg-blue-100 px-3 py-1.5 rounded-full border border-blue-200 font-medium">
+                    👆 Click any card to auto-fill the form below
                 </span>
             </div>
 
@@ -169,9 +169,9 @@ export default function TestCases({ onTestCaseSelect }: TestCasesProps) {
                         key={testCase.id}
                         onClick={() => onTestCaseSelect(testCase)}
                         className={`
-              p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 hover:shadow-md
-              text-left cursor-pointer
-              ${testCase.color}
+              p-4 rounded-xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg
+              text-left cursor-pointer transform hover:-translate-y-1 active:scale-95
+              ${testCase.color} hover:border-opacity-80 relative group
             `}
                     >
                         <div className="flex items-center gap-2 mb-2">
